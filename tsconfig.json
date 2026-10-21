@@ -17,10 +17,9 @@
     "verbatimModuleSyntax": false,
     "noEmit": true,
     "types": ["node", "vite/client"],
-    "baseUrl": ".",
     "paths": {
-      "@renderer/*": ["src/renderer/src/*"],
-      "@shared/*": ["src/shared/*"]
+      "@renderer/*": ["./src/renderer/src/*"],
+      "@shared/*": ["./src/shared/*"]
     }
   },
   "include": [

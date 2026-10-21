@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -42,6 +42,6 @@ describe('workspace path guard', () => {
 
   it('allows a new file whose parent is inside the root', async () => {
     const resolved = await assertRealInside(root, join(root, 'new-file.txt'))
-    expect(isInside(root, resolved)).toBe(true)
+    expect(isInside(await realpath(root), resolved)).toBe(true)
   })
 })
