@@ -1,0 +1,23 @@
+{
+  "module.tasks.name": "任务",
+  "module.tasks.description": "非编辑器示例模块：一个简单的任务看板。",
+  "tasks.title": "任务看板",
+  "tasks.todo": "待办",
+  "tasks.doing": "进行中",
+  "tasks.done": "已完成",
+  "tasks.addPlaceholder": "接下来要做什么？",
+  "tasks.add": "添加",
+  "tasks.empty": "这里还没有内容。",
+  "tasks.delete": "删除任务",
+  "tasks.moveLeft": "向左移动",
+  "tasks.moveRight": "向右移动",
+  "tasks.clearDone": "清除已完成",
+  "tasks.new": "新建任务",
+  "tasks.openCount": "{count} 个未完成",
+  "tasks.showDone": "显示已完成任务",
+  "tasks.settings": "任务",
+  "tasks.discardDraft": "放弃草稿任务？",
+  "tasks.discardDraftMessage": "输入框里的内容将丢失。",
+  "tasks.discardDraftConfirm": "放弃",
+  "tasks.total": "{count} 个任务"
+}

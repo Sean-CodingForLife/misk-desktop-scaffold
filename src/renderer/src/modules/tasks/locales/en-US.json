@@ -1,0 +1,23 @@
+{
+  "module.tasks.name": "Tasks",
+  "module.tasks.description": "A non-editor example module: a small task board.",
+  "tasks.title": "Task Board",
+  "tasks.todo": "To Do",
+  "tasks.doing": "In Progress",
+  "tasks.done": "Done",
+  "tasks.addPlaceholder": "What needs doing?",
+  "tasks.add": "Add",
+  "tasks.empty": "Nothing here yet.",
+  "tasks.delete": "Delete task",
+  "tasks.moveLeft": "Move left",
+  "tasks.moveRight": "Move right",
+  "tasks.clearDone": "Clear completed",
+  "tasks.new": "New Task",
+  "tasks.openCount": "{count} open",
+  "tasks.showDone": "Show completed tasks",
+  "tasks.settings": "Tasks",
+  "tasks.discardDraft": "Discard draft task?",
+  "tasks.discardDraftMessage": "The text in the composer will be lost.",
+  "tasks.discardDraftConfirm": "Discard",
+  "tasks.total": "{count} tasks"
+}
