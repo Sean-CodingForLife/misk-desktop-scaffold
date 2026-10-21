@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest a capability for the shell or a module
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What are you trying to build that the scaffold does not support?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This belongs in the shell (not a business module)
+        - label: This requires a new IPC channel / permission
+        - label: This changes the module API
