@@ -1,0 +1,14 @@
+{
+  "productName": "Misk Desktop",
+  "appId": "dev.misk.desktop",
+  "protocol": "misk",
+  "description": "A general-purpose Electron desktop shell scaffold.",
+  "repository": "https://github.com/Sean-CodingForLife/misk-desktop-scaffold",
+  "features": {
+    "demo": true,
+    "workspace": true
+  },
+  "csp": {
+    "connectSrc": ["'self'"]
+  }
+}
