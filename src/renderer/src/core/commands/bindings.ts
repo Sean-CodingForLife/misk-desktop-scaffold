@@ -1,4 +1,4 @@
-import { normalizeKeybinding } from '@shared/keybindings'
+import { type Platform, parseKeybinding } from '@shared/keybindings'
 
 interface BindableCommand {
   id: string
@@ -29,13 +29,41 @@ export function bindingsFor(
   return result
 }
 
+/**
+ * Collapses `Mod` into the platform-specific modifier so `Ctrl+Tab` and
+ * `Mod+Tab` are reported as the same shortcut on Windows/Linux.
+ */
+function canonicalForPlatform(binding: string, platform: Platform): string | null {
+  const parsed = parseKeybinding(binding)
+  if (!parsed) {
+    return null
+  }
+  const isMac = platform === 'darwin'
+  const parts: string[] = []
+  if (parsed.ctrl || (parsed.usesMod && !isMac)) {
+    parts.push('ctrl')
+  }
+  if (parsed.meta || (parsed.usesMod && isMac)) {
+    parts.push('meta')
+  }
+  if (parsed.alt) {
+    parts.push('alt')
+  }
+  if (parsed.shift) {
+    parts.push('shift')
+  }
+  parts.push(parsed.key)
+  return parts.join('+')
+}
+
 export function conflictsFor(
   commands: BindableCommand[],
-  overrides: Record<string, string | null>
+  overrides: Record<string, string | null>,
+  platform: Platform
 ): Map<string, string[]> {
   const byBinding = new Map<string, string[]>()
   for (const [id, binding] of bindingsFor(commands, overrides)) {
-    const normalized = normalizeKeybinding(binding)
+    const normalized = canonicalForPlatform(binding, platform)
     if (!normalized) {
       continue
     }

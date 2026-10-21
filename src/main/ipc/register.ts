@@ -8,7 +8,7 @@ import {
   logEntrySchema,
   type OutputOf
 } from '@shared/ipc/contract'
-import { toErrorPayload } from '@shared/ipc/errors'
+import { AppError, toErrorPayload } from '@shared/ipc/errors'
 import { app, clipboard, dialog, ipcMain, shell } from 'electron'
 import { logger } from '../app/logging'
 import { showNotification } from '../app/notifications'
@@ -40,6 +40,9 @@ export function registerIpc(context: AppContext): void {
     }),
     define('app:open-external', async ({ url }) => {
       await openExternalUrl(url)
+    }),
+    define('app:renderer-ready', () => {
+      context.rendererReady()
     }),
 
     define('window:minimize', () => {
@@ -88,7 +91,12 @@ export function registerIpc(context: AppContext): void {
       if (result.canceled || !path) {
         return { canceled: true }
       }
-      const raw = JSON.parse(await fs.readFile(path, 'utf8')) as unknown
+      let raw: unknown
+      try {
+        raw = JSON.parse(await fs.readFile(path, 'utf8')) as unknown
+      } catch {
+        throw new AppError('E_INVALID_INPUT', 'Settings file is not valid JSON')
+      }
       const settings = await context.settings.replace(raw)
       return { canceled: false, settings }
     }),

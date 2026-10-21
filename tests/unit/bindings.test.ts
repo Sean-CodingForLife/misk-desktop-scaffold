@@ -26,8 +26,15 @@ describe('command bindings', () => {
 
   it('detects normalized conflicts', () => {
     const commands = [command('a.one', 'Mod+Shift+P'), command('a.two', 'Shift+Mod+P')]
-    const conflicts = conflictsFor(commands, {})
+    const conflicts = conflictsFor(commands, {}, 'win32')
     expect(conflicts.get('a.one')).toEqual(['a.two'])
     expect(conflicts.get('a.two')).toEqual(['a.one'])
+  })
+
+  it('treats Mod and Ctrl as equivalent on Windows/Linux but not on macOS', () => {
+    const commands = [command('a.ctrl', 'Ctrl+Tab'), command('a.mod', 'Mod+Tab')]
+    expect(conflictsFor(commands, {}, 'win32').get('a.ctrl')).toEqual(['a.mod'])
+    expect(conflictsFor(commands, {}, 'linux').get('a.ctrl')).toEqual(['a.mod'])
+    expect(conflictsFor(commands, {}, 'darwin').get('a.ctrl')).toBeUndefined()
   })
 })

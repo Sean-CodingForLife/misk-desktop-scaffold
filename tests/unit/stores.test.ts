@@ -53,6 +53,13 @@ describe('UI stores', () => {
     expect(useUiStore.getState().quickSwitcherOpen).toBe(false)
   })
 
+  it('tracks keybinding recording state', () => {
+    useUiStore.getState().setKeybindingRecording(true)
+    expect(useUiStore.getState().keybindingRecording).toBe(true)
+    useUiStore.getState().setKeybindingRecording(false)
+    expect(useUiStore.getState().keybindingRecording).toBe(false)
+  })
+
   it('resolves confirmation dialogs', async () => {
     const promise = useDialogStore.getState().confirm({ title: 'Title', message: 'Message' })
     expect(useDialogStore.getState().request?.options.title).toBe('Title')

@@ -45,7 +45,13 @@ const KEY_ALIASES: Record<string, string> = {
   minus: '-',
   comma: ',',
   period: '.',
-  slash: '/'
+  slash: '/',
+  // Bindings recorded before keyboard labels were normalized stored the
+  // display glyphs. Keep parsing them so existing settings keep working.
+  '↑': 'arrowup',
+  '↓': 'arrowdown',
+  '←': 'arrowleft',
+  '→': 'arrowright'
 }
 
 export interface ParsedKeybinding {
@@ -151,6 +157,27 @@ export function formatKeybinding(binding: string, platform: Platform): string {
   return [...modifiers, key].join('+')
 }
 
+/**
+ * Canonical token stored in a binding. Arrows and `+` must use the names the
+ * parser understands; everything else keeps the historical uppercase label.
+ */
+function bindingKey(key: string): string {
+  switch (key) {
+    case 'arrowup':
+      return 'Up'
+    case 'arrowdown':
+      return 'Down'
+    case 'arrowleft':
+      return 'Left'
+    case 'arrowright':
+      return 'Right'
+    case '+':
+      return 'Plus'
+    default:
+      return formatKeyLabel(key)
+  }
+}
+
 function formatKeyLabel(key: string): string {
   switch (key) {
     case 'arrowup':
@@ -174,7 +201,7 @@ function formatKeyLabel(key: string): string {
     case 'delete':
       return 'Del'
     default:
-      return key.length === 1 ? key.toUpperCase() : key.toUpperCase()
+      return key.toUpperCase()
   }
 }
 
@@ -225,6 +252,8 @@ function electronKey(key: string): string {
       return 'Left'
     case 'arrowright':
       return 'Right'
+    case '+':
+      return 'Plus'
     default:
       return key.length === 1 ? key.toUpperCase() : key
   }
@@ -291,6 +320,8 @@ export function bindingFromEvent(
   if (!normalized) {
     return null
   }
-  parts.push(formatKeyLabel(normalized))
+  // Store the canonical binding key, not the display glyph: `↑` cannot be
+  // matched back to `ArrowUp` by keybindingMatches().
+  parts.push(bindingKey(normalized))
   return parts.join('+')
 }

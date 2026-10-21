@@ -11,12 +11,12 @@ layout       侧栏开关、宽度、当前面板
 keybindings  命令 id -> 绑定或 null
 commands     recent（命令面板最近使用）
 workspace    recent / lastId / showHidden / ignore
-advanced     logLevel / confirmOnQuit
+advanced     logLevel
 ```
 
 - 首次启动 `locale` 取系统语言（可解析时），主题默认 `system`。
 - 写入：tmp + rename 原子替换，并保留 `.bak`。
-- 损坏：备份为 `settings.corrupt-<timestamp>.json`，回默认值并提示。
+- 损坏：备份为 `settings.corrupt-<timestamp>.json`，回默认值（保留系统语言）。
 - 升级：`migrateSettings()` 按 `version` 升级；未知版本回默认。
 - patch：深合并，但 `keybindings` 是整体替换（所以 `{}` 能重置全部快捷键）。
 - 变更通过 `settings:changed` 广播；主进程同时更新 `nativeTheme.themeSource` 和窗口背景色。

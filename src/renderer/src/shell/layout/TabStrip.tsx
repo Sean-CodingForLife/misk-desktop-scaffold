@@ -67,8 +67,12 @@ export function TabStrip() {
               }}
               onDrop={(event) => {
                 event.preventDefault()
-                const from = Number(event.dataTransfer.getData('text/misk-tab'))
-                if (Number.isFinite(from)) {
+                const raw = event.dataTransfer.getData('text/misk-tab')
+                if (!raw) {
+                  return
+                }
+                const from = Number(raw)
+                if (Number.isInteger(from) && from >= 0 && from < tabs.length) {
                   reorder(from, index)
                 }
               }}

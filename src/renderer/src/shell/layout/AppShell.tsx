@@ -15,6 +15,7 @@ import { useAppMenu } from '../hooks/useAppMenu'
 import { useCloseGuard } from '../hooks/useCloseGuard'
 import { useGlobalKeybindings } from '../hooks/useGlobalKeybindings'
 import { useIpcBridge } from '../hooks/useIpcBridge'
+import { useRendererReady } from '../hooks/useRendererReady'
 import { useSessionPersistence } from '../hooks/useSessionPersistence'
 import { CommandPalette } from '../overlays/CommandPalette'
 import { ConfirmDialog } from '../overlays/ConfirmDialog'
@@ -75,6 +76,7 @@ function Shell() {
   useAppMenu()
   useGlobalKeybindings()
   useIpcBridge()
+  useRendererReady()
   useSessionPersistence()
   useCloseGuard()
 

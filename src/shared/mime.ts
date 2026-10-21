@@ -31,45 +31,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
 
 export const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'avif', 'svg', 'ico'])
 
-export const TEXT_EXTENSIONS = new Set([
-  'txt',
-  'md',
-  'markdown',
-  'json',
-  'jsonc',
-  'js',
-  'mjs',
-  'cjs',
-  'ts',
-  'tsx',
-  'jsx',
-  'css',
-  'scss',
-  'less',
-  'html',
-  'htm',
-  'xml',
-  'yml',
-  'yaml',
-  'toml',
-  'ini',
-  'csv',
-  'log',
-  'sh',
-  'ps1',
-  'py',
-  'rs',
-  'go',
-  'java',
-  'kt',
-  'c',
-  'h',
-  'cpp',
-  'hpp',
-  'sql',
-  'graphql'
-])
-
 export function extensionOf(path: string): string {
   const normalized = path.replace(/\\/g, '/')
   const name = normalized.slice(normalized.lastIndexOf('/') + 1)
@@ -90,9 +51,4 @@ export function mimeForPath(path: string): string {
 
 export function isImagePath(path: string): boolean {
   return IMAGE_EXTENSIONS.has(extensionOf(path))
-}
-
-export function isTextPath(path: string): boolean {
-  const extension = extensionOf(path)
-  return extension === '' || TEXT_EXTENSIONS.has(extension)
 }

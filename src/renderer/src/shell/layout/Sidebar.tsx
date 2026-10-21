@@ -4,7 +4,7 @@ import { panelRegistry } from '@renderer/core/panels/registry'
 import { useSettingsStore } from '@renderer/core/settings/store'
 import { cn } from '@renderer/core/utils'
 import { PanelLeftClose } from 'lucide-react'
-import { type PointerEvent as ReactPointerEvent, useEffect, useState } from 'react'
+import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function Sidebar() {
@@ -13,10 +13,12 @@ export function Sidebar() {
   const layout = useSettingsStore((state) => state.settings.layout)
   const patch = useSettingsStore((state) => state.patch)
   const [width, setWidth] = useState(layout.sidebarWidth)
+  const widthRef = useRef(layout.sidebarWidth)
   const panels = panelRegistry.list()
   const panel = panels.find((item) => item.id === layout.sidebarPanel) ?? panels[0]
 
   useEffect(() => {
+    widthRef.current = layout.sidebarWidth
     setWidth(layout.sidebarWidth)
   }, [layout.sidebarWidth])
 
@@ -27,20 +29,25 @@ export function Sidebar() {
   const beginResize = (event: ReactPointerEvent<HTMLDivElement>): void => {
     event.preventDefault()
     const startX = event.clientX
-    const startWidth = width
+    const startWidth = widthRef.current
     document.body.classList.add('is-resizing')
     const onMove = (moveEvent: PointerEvent): void => {
       const next = Math.min(480, Math.max(220, startWidth + moveEvent.clientX - startX))
+      widthRef.current = next
       setWidth(next)
     }
     const onUp = (): void => {
       document.body.classList.remove('is-resizing')
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
-      setSidebarWidth(width)
+      window.removeEventListener('pointercancel', onUp)
+      // Persist the latest dragged width instead of the value captured when
+      // the pointer went down.
+      setSidebarWidth(widthRef.current)
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
   }
 
   const Icon = panel.icon

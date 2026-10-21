@@ -75,6 +75,112 @@ test('opens a view from a deep link', async () => {
   }
 })
 
+test('switches settings sections after opening a specific section', async () => {
+  const { app, page, userData } = await launchApp()
+  try {
+    await page.keyboard.press('Control+Shift+P')
+    await page.locator('.palette-input').fill('about')
+    await page
+      .locator('.palette-item', {
+        has: page.locator('.palette-item-title', { hasText: /^About$/ })
+      })
+      .first()
+      .click()
+    await expect(page.locator('.settings-view')).toBeVisible()
+    await expect(page.locator('.settings-nav-item.active')).toHaveText('About')
+
+    await page.locator('.settings-nav-item', { hasText: 'Appearance' }).click()
+    await expect(page.locator('.settings-nav-item.active')).toHaveText('Appearance')
+  } finally {
+    await closeApp(app, userData)
+  }
+})
+
+test('applies concurrent settings patches without losing either change', async () => {
+  const { app, page, userData } = await launchApp()
+  try {
+    const result = await page.evaluate(async () => {
+      const settled = await Promise.allSettled([
+        window.misk.settings.patch({ appearance: { theme: 'dark' } }),
+        window.misk.settings.patch({ appearance: { accent: 'cyan' } })
+      ])
+      const settings = await window.misk.settings.get()
+      return {
+        statuses: settled.map((entry) => entry.status),
+        theme: settings.appearance.theme,
+        accent: settings.appearance.accent
+      }
+    })
+    expect(result.statuses).toEqual(['fulfilled', 'fulfilled'])
+    expect(result.theme).toBe('dark')
+    expect(result.accent).toBe('cyan')
+  } finally {
+    await closeApp(app, userData)
+  }
+})
+
+test('opens a view from a cold-start deep link', async () => {
+  const { app, page, userData } = await launchApp({ argv: ['misk://view/tasks.board'] })
+  try {
+    await expect(page.locator('.tab', { hasText: 'Task Board' })).toBeVisible()
+  } finally {
+    await closeApp(app, userData)
+  }
+})
+
+test('persists the sidebar width after dragging', async () => {
+  const { app, page, userData } = await launchApp()
+  try {
+    const initial = await page.evaluate(async () => {
+      const settings = await window.misk.settings.get()
+      return settings.layout.sidebarWidth
+    })
+    const box = await page.locator('.sidebar-resize').boundingBox()
+    expect(box).not.toBeNull()
+    if (!box) {
+      return
+    }
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 8 })
+    await page.mouse.up()
+    await expect
+      .poll(async () =>
+        page.evaluate(async () => {
+          const settings = await window.misk.settings.get()
+          return settings.layout.sidebarWidth
+        })
+      )
+      .toBeGreaterThan(initial)
+  } finally {
+    await closeApp(app, userData)
+  }
+})
+
+test('does not run shortcuts while recording a keybinding', async () => {
+  const { app, page, userData } = await launchApp()
+  try {
+    await page.locator('.activity-item[aria-label="Settings"]').click()
+    await page.locator('.settings-nav-item', { hasText: 'Keyboard shortcuts' }).click()
+    await expect(page.locator('.keybinding-list')).toBeVisible()
+
+    await page.locator('.keybinding-button').first().click()
+    await page.waitForTimeout(100)
+    await page.keyboard.press('Control+Shift+P')
+
+    await expect(page.locator('.palette')).toHaveCount(0)
+    await expect
+      .poll(async () =>
+        page.evaluate(
+          async () => Object.keys((await window.misk.settings.get()).keybindings).length
+        )
+      )
+      .toBeGreaterThan(0)
+  } finally {
+    await closeApp(app, userData)
+  }
+})
+
 test('opens a workspace and previews a file', async () => {
   const workspace = await mkdtemp(join(tmpdir(), 'misk-e2e-workspace-'))
   await mkdir(workspace, { recursive: true })

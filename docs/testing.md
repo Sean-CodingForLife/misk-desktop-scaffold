@@ -22,7 +22,8 @@ npm run verify           # lint + typecheck + coverage + build
 
 - 每个用例使用临时 userData，避免污染本机设置。
 - `MISK_E2E=1` 启用测试旁路：`MISK_USER_DATA`、`MISK_E2E_WORKSPACE`（目录对话框直接返回该路径）。
-- 覆盖：启动 Home、命令面板、Tasks 持久化、主题/语言持久化、工作区文件树与预览。
+- 覆盖：启动 Home、命令面板、设置分区切换、并发设置写入、冷启动深链、Tasks 持久化、
+  主题/语言持久化、工作区文件树与预览。
 - 截图：`npm run screenshot` 输出 `docs/screenshot.png` 与 `docs/screenshot-tasks.png`。
 
 ## 注意

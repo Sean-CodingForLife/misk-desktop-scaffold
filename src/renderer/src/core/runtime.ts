@@ -7,7 +7,6 @@ import { toggleSidebar } from './layout'
 import { closeActiveTab, closeTab, closeWorkspaceTabs, navigateHome, openView } from './navigation'
 import { queryClient } from './query/client'
 import { useRouteStore } from './route/store'
-import { getAppRouter } from './router/router-instance'
 import { useSettingsStore } from './settings/store'
 import { notify } from './toast/store'
 import { useUiStore } from './ui/store'
@@ -69,17 +68,6 @@ export function createRuntime(appInfo: AppInfo): CommandRuntime {
     },
     executeCommand: (id, args) => executeCommand(id, args)
   }
-}
-
-export function titleForView(viewId: string | null): string | null {
-  if (!viewId) {
-    return null
-  }
-  const router = getAppRouter()
-  if (!router) {
-    return null
-  }
-  return null
 }
 
 export function t(key: string, params?: Record<string, string | number>): string {

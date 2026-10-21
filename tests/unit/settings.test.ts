@@ -40,6 +40,12 @@ describe('settings', () => {
     expect(future).toEqual(defaultSettings)
   })
 
+  it('uses the provided fallback for unusable data', () => {
+    const fallback = { ...defaultSettings, locale: 'zh-CN' }
+    expect(migrateSettings({ version: 99 }, fallback).locale).toBe('zh-CN')
+    expect(migrateSettings(null, fallback).locale).toBe('zh-CN')
+  })
+
   it('rejects invalid patches', () => {
     expect(() => mergeSettings(defaultSettings, { layout: { sidebarWidth: 10 } })).toThrow()
   })

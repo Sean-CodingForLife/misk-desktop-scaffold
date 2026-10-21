@@ -1,5 +1,3 @@
-export const IPC_VERSION = 1
-
 export const MAX_RECENT_WORKSPACES = 10
 export const MAX_SESSION_TABS = 50
 export const MAX_STORAGE_BYTES = 2 * 1024 * 1024

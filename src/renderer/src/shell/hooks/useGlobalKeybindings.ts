@@ -23,6 +23,7 @@ export function useGlobalKeybindings(): void {
   const paletteOpen = useUiStore((state) => state.paletteOpen)
   const quickSwitcherOpen = useUiStore((state) => state.quickSwitcherOpen)
   const shortcutsOpen = useUiStore((state) => state.shortcutsOpen)
+  const keybindingRecording = useUiStore((state) => state.keybindingRecording)
   const dialogOpen = useDialogStore((state) => state.request !== null)
   const platform = getAppInfo().platform
 
@@ -35,6 +36,7 @@ export function useGlobalKeybindings(): void {
         paletteOpen ||
         quickSwitcherOpen ||
         shortcutsOpen ||
+        keybindingRecording ||
         dialogOpen
       ) {
         return
@@ -56,5 +58,13 @@ export function useGlobalKeybindings(): void {
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
-  }, [dialogOpen, keybindings, paletteOpen, platform, quickSwitcherOpen, shortcutsOpen])
+  }, [
+    dialogOpen,
+    keybindingRecording,
+    keybindings,
+    paletteOpen,
+    platform,
+    quickSwitcherOpen,
+    shortcutsOpen
+  ])
 }

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { LOG_LEVELS } from '../constants'
+import { FILE_GRANT_LIMIT, LOG_LEVELS } from '../constants'
 import { menuRoleSchema, menuTemplateSchema } from '../menu'
 import { sessionParamsSchema, sessionSchema } from '../session/schema'
 import { settingsPatchSchema, settingsSchema } from '../settings/schema'
@@ -165,6 +165,7 @@ export const ipcContract = {
   'app:quit': { input: z.void(), output: z.void() },
   'app:open-logs': { input: z.void(), output: z.void() },
   'app:open-external': { input: z.object({ url: z.string().min(1) }), output: z.void() },
+  'app:renderer-ready': { input: z.void(), output: z.void() },
 
   'window:minimize': { input: z.void(), output: z.void() },
   'window:toggle-maximize': { input: z.void(), output: z.boolean() },
@@ -238,7 +239,7 @@ export const ipcContract = {
   'files:stat': { input: z.object({ handle: z.string().min(1) }), output: fileStatSchema },
   'files:close': { input: z.object({ handle: z.string().min(1) }), output: z.void() },
   'files:grant': {
-    input: z.object({ paths: z.array(z.string().min(1)).min(1).max(32) }),
+    input: z.object({ paths: z.array(z.string().min(1)).min(1).max(FILE_GRANT_LIMIT) }),
     output: z.array(fileHandleInfoSchema)
   },
   'files:reveal': { input: z.object({ handle: z.string().min(1) }), output: z.void() },

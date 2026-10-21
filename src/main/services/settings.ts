@@ -18,6 +18,7 @@ export class SettingsService {
   private readonly file: string
   private value: AppSettings = defaultSettings
   private readonly listeners = new Set<SettingsListener>()
+  private pending: Promise<unknown> = Promise.resolve()
 
   constructor(file = join(app.getPath('userData'), 'settings.json')) {
     this.file = file
@@ -37,7 +38,7 @@ export class SettingsService {
         await this.write(initial)
         return this.value
       }
-      const migrated = migrateSettings(parsed)
+      const migrated = migrateSettings(parsed, initial)
       this.value = migrated
       if (settingsSchema.safeParse(parsed).success === false) {
         await this.write(migrated)
@@ -62,44 +63,66 @@ export class SettingsService {
     return () => this.listeners.delete(listener)
   }
 
-  async patch(patch: SettingsPatch): Promise<AppSettings> {
-    let next: AppSettings
-    try {
-      next = mergeSettings(this.value, patch)
-    } catch (error) {
-      throw new AppError(
-        'E_INVALID_INPUT',
-        error instanceof Error ? error.message : 'Invalid settings patch'
-      )
-    }
-    await this.write(next)
-    this.value = next
-    this.emit()
-    return next
+  patch(patch: SettingsPatch): Promise<AppSettings> {
+    return this.enqueue(async () => {
+      let next: AppSettings
+      try {
+        next = mergeSettings(this.value, patch)
+      } catch (error) {
+        throw new AppError(
+          'E_INVALID_INPUT',
+          error instanceof Error ? error.message : 'Invalid settings patch'
+        )
+      }
+      await this.write(next)
+      this.value = next
+      this.emit()
+      return next
+    })
   }
 
-  async replace(raw: unknown): Promise<AppSettings> {
-    const next = migrateSettings(raw)
-    const parsed = settingsSchema.safeParse(next)
-    if (!parsed.success) {
-      throw new AppError('E_INVALID_INPUT', 'Imported settings are invalid')
-    }
-    await this.write(parsed.data)
-    this.value = parsed.data
-    this.emit()
-    return this.value
+  replace(raw: unknown): Promise<AppSettings> {
+    return this.enqueue(async () => {
+      const next = migrateSettings(raw)
+      const parsed = settingsSchema.safeParse(next)
+      if (!parsed.success) {
+        throw new AppError('E_INVALID_INPUT', 'Imported settings are invalid')
+      }
+      await this.write(parsed.data)
+      this.value = parsed.data
+      this.emit()
+      return this.value
+    })
   }
 
-  async reset(): Promise<AppSettings> {
-    await this.write(defaultSettings)
-    this.value = defaultSettings
-    this.emit()
-    return this.value
+  reset(): Promise<AppSettings> {
+    return this.enqueue(async () => {
+      await this.write(defaultSettings)
+      this.value = defaultSettings
+      this.emit()
+      return this.value
+    })
+  }
+
+  /**
+   * Settings writes are serialized: merge, write and commit all happen after
+   * the previous patch settled. Without this, two concurrent patches merge on
+   * the same stale value and the last write wins (or one rename fails).
+   */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const result = this.pending.then(task, task)
+    this.pending = result.catch(() => undefined)
+    return result
   }
 
   private emit(): void {
     for (const listener of this.listeners) {
-      listener(this.value)
+      try {
+        listener(this.value)
+      } catch (error) {
+        // A broken listener must not make a persisted patch look failed.
+        console.warn('[settings] listener failed', error)
+      }
     }
   }
 

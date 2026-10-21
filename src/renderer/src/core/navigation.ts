@@ -1,3 +1,4 @@
+import { MAX_SESSION_TABS } from '@shared/constants'
 import type { SessionTab } from '@shared/session/schema'
 import { i18n } from './i18n'
 import { tabKey as makeKey, useRouteStore } from './route/store'
@@ -66,6 +67,10 @@ export function openView(viewId: string, params: ViewParams = {}): void {
     activateTab({ ...existing, params: nextParams })
     return
   }
+  if (tabs.length >= MAX_SESSION_TABS) {
+    notify(i18n.t('toast.tooManyTabs', { max: MAX_SESSION_TABS }), 'warning')
+    return
+  }
   const tab = createTab(viewId, nextParams, viewRegistry.titleFor(definition))
   useTabsStore.getState().add(tab)
   activateTab(tab)
@@ -88,9 +93,28 @@ export function ensureTab(viewId: string, params: ViewParams): TabInstance | nul
   if (existing) {
     return existing
   }
+  if (useTabsStore.getState().tabs.length >= MAX_SESSION_TABS) {
+    return null
+  }
   const tab = createTab(viewId, nextParams, viewRegistry.titleFor(definition))
   useTabsStore.getState().add(tab)
   return tab
+}
+
+function releaseHandle(tab: TabInstance): void {
+  if (tab.params.source !== 'handle') {
+    return
+  }
+  const handle = tab.params.handle
+  if (typeof handle !== 'string' || handle.length === 0) {
+    return
+  }
+  const stillUsed = useTabsStore
+    .getState()
+    .tabs.some((item) => item.params.source === 'handle' && item.params.handle === handle)
+  if (!stillUsed) {
+    void window.misk.files.close(handle).catch(() => undefined)
+  }
 }
 
 export function closeTab(id: string): void {
@@ -106,6 +130,7 @@ export function closeTab(id: string): void {
   const activeKey = useRouteStore.getState().key
   const wasActive = activeKey === makeKey(tab.viewId, tab.params)
   useTabsStore.getState().remove(id)
+  releaseHandle(tab)
   if (!wasActive) {
     return
   }
@@ -129,7 +154,11 @@ export function closeActiveTab(): void {
 }
 
 export function closeAllTabs(): void {
+  const closing = useTabsStore.getState().tabs
   useTabsStore.getState().replace([])
+  for (const tab of closing) {
+    releaseHandle(tab)
+  }
   navigateHome()
 }
 
@@ -191,7 +220,9 @@ export function relocalizeTabs(): void {
 }
 
 export function sessionSnapshot(): { tabs: SessionTab[]; activeIndex: number } {
-  const tabs = useTabsStore.getState().tabs
+  // Defensive slice: the session schema rejects more than MAX_SESSION_TABS,
+  // and a rejected patch would silently disable session persistence.
+  const tabs = useTabsStore.getState().tabs.slice(0, MAX_SESSION_TABS)
   const activeKey = useRouteStore.getState().key
   const activeIndex = tabs.findIndex((tab) => makeKey(tab.viewId, tab.params) === activeKey)
   return {
@@ -217,7 +248,8 @@ export function restoreSessionTabs(
 ): RestoredSession {
   const restored: TabInstance[] = []
   const seen = new Set<string>()
-  for (const entry of tabs) {
+  let activeId: string | null = null
+  for (const [index, entry] of tabs.entries()) {
     const definition = viewRegistry.get(entry.viewId)
     if (!definition) {
       continue
@@ -237,10 +269,18 @@ export function restoreSessionTabs(
       continue
     }
     seen.add(key)
-    restored.push(createTab(entry.viewId, parsed.params, viewRegistry.titleFor(definition)))
+    const tab = createTab(entry.viewId, parsed.params, viewRegistry.titleFor(definition))
+    restored.push(tab)
+    if (index === activeIndex) {
+      activeId = tab.id
+    }
   }
   const boundedIndex =
-    restored.length === 0 ? -1 : Math.min(Math.max(activeIndex, 0), restored.length - 1)
+    activeId !== null
+      ? restored.findIndex((tab) => tab.id === activeId)
+      : activeIndex < 0 || restored.length === 0
+        ? -1
+        : Math.min(activeIndex, restored.length - 1)
   return {
     tabs: restored,
     activeIndex: boundedIndex,

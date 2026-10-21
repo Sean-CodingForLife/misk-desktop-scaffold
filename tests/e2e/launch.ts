@@ -10,7 +10,7 @@ export interface LaunchedApp {
 }
 
 export async function launchApp(
-  options: { userData?: string; workspace?: string } = {}
+  options: { userData?: string; workspace?: string; argv?: string[] } = {}
 ): Promise<LaunchedApp> {
   const userData = options.userData ?? (await mkdtemp(join(tmpdir(), 'misk-e2e-')))
   const env: Record<string, string> = {}
@@ -26,7 +26,7 @@ export async function launchApp(
     env.MISK_E2E_WORKSPACE = options.workspace
   }
 
-  const app = await electron.launch({ args: ['.'], env })
+  const app = await electron.launch({ args: ['.', ...(options.argv ?? [])], env })
   const page = await app.firstWindow()
   await page.waitForSelector('.app')
   // Deterministic UI language for selectors and screenshots.

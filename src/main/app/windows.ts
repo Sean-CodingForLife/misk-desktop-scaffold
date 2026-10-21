@@ -18,6 +18,7 @@ interface WindowState {
 interface WindowCallbacks {
   onRendererGone: (reason: string) => void
   onUnresponsive: () => void
+  onCloseDenied: () => void
 }
 
 const DEFAULT_STATE: WindowState = {
@@ -109,6 +110,7 @@ export class WindowService {
       event.preventDefault()
       void this.requestClose().then((allow) => {
         if (!allow) {
+          this.callbacks.onCloseDenied()
           return
         }
         this.forceClose = true
@@ -256,7 +258,9 @@ export class WindowService {
     if (!this.window || this.window.isDestroyed()) {
       return
     }
-    const bounds = this.window.getBounds()
+    // Save the restored bounds so a maximized/full-screen window does not
+    // reopen at screen size after the user un-maximizes it.
+    const bounds = this.window.getNormalBounds()
     const state: WindowState = {
       x: bounds.x,
       y: bounds.y,

@@ -1,9 +1,10 @@
 import { useLocalize } from '@renderer/core/i18n'
+import { openView } from '@renderer/core/navigation'
 import { settingsSectionRegistry } from '@renderer/core/settings/sections'
 import type { ViewParams, ViewProps } from '@renderer/core/types'
 import { Input } from '@renderer/shell/ui/primitives'
 import { Search } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface SettingsParams extends ViewParams {
@@ -15,13 +16,9 @@ export function SettingsView({ params }: ViewProps<SettingsParams>) {
   const localize = useLocalize()
   const sections = settingsSectionRegistry.list()
   const [query, setQuery] = useState('')
-  const [activeId, setActiveId] = useState(params.section ?? sections[0]?.id ?? '')
-
-  useEffect(() => {
-    if (params.section && params.section !== activeId) {
-      setActiveId(params.section)
-    }
-  }, [activeId, params.section])
+  // The selected section lives in the tab params, so switching sections
+  // survives re-renders and the session instead of fighting a local effect.
+  const activeId = params.section ?? sections[0]?.id ?? ''
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -61,7 +58,7 @@ export function SettingsView({ params }: ViewProps<SettingsParams>) {
               className={
                 section.id === active?.id ? 'settings-nav-item active' : 'settings-nav-item'
               }
-              onClick={() => setActiveId(section.id)}
+              onClick={() => openView('core.settings', { section: section.id })}
             >
               {localize(section.title)}
             </button>

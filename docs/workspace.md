@@ -21,7 +21,7 @@
 
 `workspace:watch(id)` 使用 Node `fs.watch(root, { recursive: true })`，150ms 防抖，
 合并事件后发送 `workspace:changed`。忽略 `settings.workspace.ignore`，默认 `.git`、`node_modules`、`dist`、`out`。
-监听失败会记录日志、Toast 一次，并保留手动刷新。
+监听失败会记录日志，并保留手动刷新。
 
 ## 文件预览
 

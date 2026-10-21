@@ -34,8 +34,7 @@ export const settingsSchema = z.object({
     ignore: z.array(z.string())
   }),
   advanced: z.object({
-    logLevel: z.enum(LOG_LEVELS),
-    confirmOnQuit: z.boolean()
+    logLevel: z.enum(LOG_LEVELS)
   })
 })
 
@@ -67,8 +66,7 @@ export const defaultSettings: AppSettings = {
     ignore: ['.git', 'node_modules', 'dist', 'out']
   },
   advanced: {
-    logLevel: 'info',
-    confirmOnQuit: true
+    logLevel: 'info'
   }
 }
 
@@ -105,8 +103,7 @@ export const settingsPatchSchema = z.object({
     .optional(),
   advanced: z
     .object({
-      logLevel: z.enum(LOG_LEVELS).optional(),
-      confirmOnQuit: z.boolean().optional()
+      logLevel: z.enum(LOG_LEVELS).optional()
     })
     .optional()
 })
@@ -130,19 +127,22 @@ export function mergeSettings(current: AppSettings, patch: SettingsPatch): AppSe
  * Settings migrations. Version 1 is the initial schema; future versions append
  * a case here and bump `version` in the schema.
  */
-export function migrateSettings(raw: unknown): AppSettings {
+export function migrateSettings(
+  raw: unknown,
+  fallback: AppSettings = defaultSettings
+): AppSettings {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-    return defaultSettings
+    return fallback
   }
   const record = raw as Record<string, unknown>
   const version = typeof record.version === 'number' ? record.version : 1
   if (version > 1) {
-    return defaultSettings
+    return fallback
   }
   const merged = deepMerge(
-    defaultSettings as unknown as Record<string, unknown>,
+    fallback as unknown as Record<string, unknown>,
     record
   ) as unknown as Record<string, unknown>
   const parsed = settingsSchema.safeParse(merged)
-  return parsed.success ? parsed.data : defaultSettings
+  return parsed.success ? parsed.data : fallback
 }

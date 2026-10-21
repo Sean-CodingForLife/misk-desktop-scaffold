@@ -66,4 +66,34 @@ describe('keybindings', () => {
     expect(bindingFromEvent(event({ key: 'F1' }), 'win32')).toBe('F1')
     expect(bindingFromEvent(event({ key: 'Control', ctrlKey: true }), 'win32')).toBeNull()
   })
+
+  it('round-trips arrow-key bindings instead of storing display glyphs', () => {
+    const arrowUp = event({ key: 'ArrowUp', code: 'ArrowUp', ctrlKey: true })
+    const binding = bindingFromEvent(arrowUp, 'win32')
+    expect(binding).toBe('Mod+Up')
+    if (!binding) {
+      throw new Error('expected a binding')
+    }
+    expect(keybindingMatches(arrowUp, binding, 'win32')).toBe(true)
+    expect(formatKeybinding(binding, 'win32')).toBe('Ctrl+↑')
+
+    const arrowDown = event({ key: 'ArrowDown', code: 'ArrowDown', altKey: true })
+    expect(bindingFromEvent(arrowDown, 'win32')).toBe('Alt+Down')
+    expect(keybindingMatches(arrowDown, 'Alt+Down', 'win32')).toBe(true)
+  })
+
+  it('still matches legacy symbol bindings', () => {
+    const arrowLeft = event({ key: 'ArrowLeft', code: 'ArrowLeft', altKey: true })
+    expect(keybindingMatches(arrowLeft, 'Alt+←', 'win32')).toBe(true)
+  })
+
+  it('round-trips the plus key', () => {
+    const plus = event({ key: '+', code: 'Equal', ctrlKey: true, shiftKey: true })
+    const binding = bindingFromEvent(plus, 'win32')
+    expect(binding).toBe('Mod+Shift+Plus')
+    if (!binding) {
+      throw new Error('expected a binding')
+    }
+    expect(keybindingMatches(plus, binding, 'win32')).toBe(true)
+  })
 })

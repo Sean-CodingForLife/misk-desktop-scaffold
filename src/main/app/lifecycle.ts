@@ -26,14 +26,26 @@ let closeRequestId: string | null = null
 let closeResolver: ((allow: boolean) => void) | null = null
 let closeTimer: NodeJS.Timeout | null = null
 let pendingClose: Promise<boolean> | null = null
+let closeClosedListener: (() => void) | null = null
 let pendingUrls: string[] = []
 let pendingPaths: string[] = []
 let quitting = false
+let quitRequested = false
+let rendererReady = false
+
+function windowIsUsable(): boolean {
+  const window = context?.windows.get()
+  return Boolean(window && !window.isDestroyed())
+}
 
 function finishClose(allow: boolean): void {
   if (closeTimer) {
     clearTimeout(closeTimer)
     closeTimer = null
+  }
+  if (closeClosedListener) {
+    context?.windows.get()?.removeListener('closed', closeClosedListener)
+    closeClosedListener = null
   }
   const resolver = closeResolver
   closeResolver = null
@@ -45,6 +57,11 @@ function finishClose(allow: boolean): void {
 async function requestClose(): Promise<boolean> {
   const window = context?.windows.get()
   if (!window || window.isDestroyed() || window.webContents.isDestroyed()) {
+    return true
+  }
+  // Closing before the renderer mounted its close listener would wait for the
+  // 15s fallback dialog. There is nothing to guard yet, so allow the close.
+  if (!rendererReady) {
     return true
   }
   if (pendingClose) {
@@ -75,7 +92,12 @@ async function requestClose(): Promise<boolean> {
     }, 15_000)
   })
   window.webContents.send('app:before-close', { requestId })
-  window.once('closed', () => finishClose(true))
+  const onClosed = (): void => {
+    closeClosedListener = null
+    finishClose(true)
+  }
+  closeClosedListener = onClosed
+  window.once('closed', onClosed)
   return pendingClose
 }
 
@@ -88,8 +110,10 @@ function findDeepLink(argv: string[]): string | undefined {
 }
 
 function sendDeepLink(url: string): void {
-  if (!context?.windows.get()) {
-    pendingUrls.push(url)
+  if (!context || !windowIsUsable() || !rendererReady) {
+    if (!pendingUrls.includes(url)) {
+      pendingUrls.push(url)
+    }
     return
   }
   context.windows.send('app:open-url', { url })
@@ -97,8 +121,10 @@ function sendDeepLink(url: string): void {
 }
 
 async function sendOpenPath(path: string): Promise<void> {
-  if (!context) {
-    pendingPaths.push(path)
+  if (!context || !windowIsUsable() || !rendererReady) {
+    if (!pendingPaths.includes(path)) {
+      pendingPaths.push(path)
+    }
     return
   }
   try {
@@ -118,6 +144,9 @@ async function sendOpenPath(path: string): Promise<void> {
 }
 
 function flushPending(): void {
+  if (!rendererReady) {
+    return
+  }
   const urls = pendingUrls
   const paths = pendingPaths
   pendingUrls = []
@@ -162,9 +191,12 @@ async function createWindow(): Promise<void> {
   if (!context) {
     return
   }
+  rendererReady = false
   const window = await context.windows.create()
-  window.webContents.once('did-finish-load', () => {
-    setTimeout(flushPending, 500)
+  // Pending deep links and file paths are flushed from `app:renderer-ready`
+  // once the renderer has mounted its listeners. A reload resets the flag.
+  window.webContents.on('did-start-loading', () => {
+    rendererReady = false
   })
 }
 
@@ -227,6 +259,7 @@ export async function bootstrap(): Promise<void> {
 
   const windows = new WindowService(requestClose, logger, {
     onRendererGone: (reason) => {
+      rendererReady = false
       const window = windows.get()
       if (!window || window.isDestroyed()) {
         return
@@ -268,6 +301,11 @@ export async function bootstrap(): Promise<void> {
             window.reload()
           }
         })
+    },
+    onCloseDenied: () => {
+      // A cancelled close must also cancel a pending app.quit(), otherwise a
+      // later normal window close would exit on macOS.
+      quitRequested = false
     }
   })
 
@@ -294,8 +332,16 @@ export async function bootstrap(): Promise<void> {
         return
       }
       finishClose(allow)
+    },
+    rendererReady: () => {
+      rendererReady = true
+      flushPending()
     }
   }
+
+  // Cold-start argv (protocol URL or file path on Windows/Linux). The events
+  // are queued here and flushed once the renderer reports itself ready.
+  handleArgv(process.argv)
 
   installAppProtocol()
   configureSession()
@@ -325,7 +371,9 @@ export async function bootstrap(): Promise<void> {
   })
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
+    // On macOS a plain window close keeps the app alive, but a quit that was
+    // interrupted by the asynchronous close guard must be resumed.
+    if (process.platform !== 'darwin' || quitRequested) {
       app.quit()
     }
   })
@@ -344,7 +392,9 @@ export async function bootstrap(): Promise<void> {
   })
 
   app.on('before-quit', () => {
-    // Window close guards are handled by WindowService; this hook exists so
-    // native Cmd+Q / Alt+F4 paths are explicit.
+    // app.quit() closes windows asynchronously through the window close guard.
+    // Remember the intent so macOS can quit after the window finally closes,
+    // and clear it again if the guard denies the close.
+    quitRequested = true
   })
 }

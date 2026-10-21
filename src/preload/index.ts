@@ -50,6 +50,7 @@ const api = {
   app: {
     getInfo: (): Promise<AppInfo> => invoke('app:get-info'),
     quit: (): Promise<void> => invoke('app:quit'),
+    rendererReady: (): Promise<void> => invoke('app:renderer-ready'),
     openLogs: (): Promise<void> => invoke('app:open-logs'),
     openExternal: (url: string): Promise<void> => invoke('app:open-external', { url }),
     onOpenUrl: (callback: (payload: { url: string }) => void) => on('app:open-url', callback),

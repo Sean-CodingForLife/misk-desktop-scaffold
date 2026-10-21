@@ -31,7 +31,8 @@ interface WorkspaceRecord {
 interface WatchState {
   watcher: FSWatcher
   timer: NodeJS.Timeout | null
-  pending: Map<string, 'add' | 'change' | 'unlink'>
+  // `rename` is resolved against the filesystem when the debounce flushes.
+  pending: Map<string, 'change' | 'rename'>
 }
 
 const IGNORE_FALLBACK = new Set(['.git', 'node_modules', 'dist', 'out'])
@@ -72,7 +73,13 @@ export class WorkspaceService {
     if (record.kind !== 'directory') {
       throw new AppError('E_INVALID_INPUT', 'Workspace handle is not a directory')
     }
-    return this.openPath(record.path)
+    try {
+      return await this.openPath(record.path)
+    } finally {
+      // The workspace keeps its own root record; the one-shot handle is not
+      // needed afterwards and would otherwise stay in the handle map forever.
+      this.files.close(handle)
+    }
   }
 
   async openRecent(id: string): Promise<WorkspaceInfo | null> {
@@ -234,9 +241,11 @@ export class WorkspaceService {
         if (!state) {
           return
         }
-        const path = filename ? filename.split('\\').join('/') : ''
-        const type = eventType === 'rename' ? 'change' : 'change'
-        state.pending.set(path, type)
+        const raw = filename ?? ''
+        // Windows reports backslashes; POSIX file names may legitimately
+        // contain them, so only translate on Windows.
+        const path = process.platform === 'win32' ? raw.replace(/\\/g, '/') : raw
+        state.pending.set(path, eventType === 'rename' ? 'rename' : 'change')
         this.scheduleFlush(id)
       })
       watcher.on('error', (error) => {
@@ -323,7 +332,9 @@ export class WorkspaceService {
       const absolute = join(record.root, path)
       try {
         await fs.stat(absolute)
-        changes.push({ path, type: fallback })
+        // A `rename` that still exists is a create/rename-in; a missing path
+        // is a delete/rename-out.
+        changes.push({ path, type: fallback === 'rename' ? 'add' : 'change' })
       } catch {
         changes.push({ path, type: 'unlink' })
       }

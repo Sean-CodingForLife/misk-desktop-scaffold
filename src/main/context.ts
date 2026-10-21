@@ -21,4 +21,5 @@ export interface AppContext {
   menu: MenuService
   windows: WindowService
   resolveClose: (requestId: string, allow: boolean) => void
+  rendererReady: () => void
 }

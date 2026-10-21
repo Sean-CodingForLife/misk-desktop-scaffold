@@ -7,6 +7,7 @@ import { moduleStatuses } from '@renderer/core/modules/types'
 import { panelRegistry } from '@renderer/core/panels/registry'
 import { useSettingsStore } from '@renderer/core/settings/store'
 import { notify } from '@renderer/core/toast/store'
+import { useUiStore } from '@renderer/core/ui/store'
 import { cn } from '@renderer/core/utils'
 import { viewRegistry } from '@renderer/core/views/registry'
 import { Button, Field, Input, Select } from '@renderer/shell/ui/primitives'
@@ -124,9 +125,14 @@ export function KeybindingsSection() {
   const [recording, setRecording] = useState<string | null>(null)
   const commands = commandRegistry.list()
   const conflicts = useMemo(
-    () => conflictsFor(commands, settings.keybindings),
-    [commands, settings.keybindings]
+    () => conflictsFor(commands, settings.keybindings, info.platform),
+    [commands, info.platform, settings.keybindings]
   )
+
+  useEffect(() => {
+    useUiStore.getState().setKeybindingRecording(recording !== null)
+    return () => useUiStore.getState().setKeybindingRecording(false)
+  }, [recording])
 
   useEffect(() => {
     if (!recording) {
@@ -307,12 +313,21 @@ export function AdvancedSection() {
   }
 
   const importSettings = async (): Promise<void> => {
-    const result = await window.misk.settings.import()
-    if (!result.canceled) {
-      if (result.settings) {
-        useSettingsStore.getState().set(result.settings)
+    try {
+      const result = await window.misk.settings.import()
+      if (!result.canceled) {
+        if (result.settings) {
+          useSettingsStore.getState().set(result.settings)
+        }
+        notify(t('toast.settingsImported'), 'success')
       }
-      notify(t('toast.settingsImported'), 'success')
+    } catch (error) {
+      notify(
+        t('toast.settingsFailed', {
+          message: error instanceof Error ? error.message : String(error)
+        }),
+        'error'
+      )
     }
   }
 
@@ -326,7 +341,7 @@ export function AdvancedSection() {
   const resetAll = async (): Promise<void> => {
     const confirmed = await useDialogStore.getState().confirm({
       title: t('settings.resetAll'),
-      message: t('dialog.quitMessage'),
+      message: t('settings.resetMessage'),
       confirmLabel: t('common.reset'),
       danger: true
     })
